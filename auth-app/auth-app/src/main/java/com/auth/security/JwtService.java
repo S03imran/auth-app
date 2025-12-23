@@ -5,6 +5,8 @@ import com.auth.entities.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Service
 public class JwtService {
     private final SecretKey key;
@@ -49,7 +53,7 @@ public class JwtService {
                 .claims(Map.of(
                         "email", user.getEmail(),
                         "roles", roles,
-                        "type", "access"
+                        "typ", "access"
                 ))
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
@@ -64,8 +68,8 @@ public class JwtService {
                 .subject(user.getId().toString())
                 .issuer(issuer)
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(accessTtlSeconds)))
-                .claim("type", "refresh")
+                .expiration(Date.from(now.plusSeconds(refreshTtlSeconds)))
+                .claim("typ", "refresh")
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }

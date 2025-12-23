@@ -53,7 +53,7 @@ public class JwtAuthenticationFilter  extends OncePerRequestFilter {
 
                 userRepository.findById(userUuid).ifPresent(user ->{
                     //check for user enable or not
-                    if(!user.isEnable()){
+                    if(user.isEnable()){
                         List<GrantedAuthority> authorities = user.getRoles()==null? List.of():user.getRoles().stream().map(role -> new SimpleGrantedAuthority(role.getName())).collect(Collectors.toList());
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(user.getEmail(),null,authorities);
                         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -68,15 +68,18 @@ public class JwtAuthenticationFilter  extends OncePerRequestFilter {
 
 
             }catch (ExpiredJwtException e){
-                e.printStackTrace();
-            }catch (MalformedJwtException e){
-                e.printStackTrace();
-            }catch (JwtException e){
-                e.printStackTrace();
+                request.setAttribute("error","Invalid Token");
+                //e.printStackTrace();
             }catch (Exception e){
-                e.printStackTrace();
+                request.setAttribute("error","Invalid Token");
+                //e.printStackTrace();
             }
         }
         filterChain.doFilter(request,response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        return request.getRequestURI().startsWith("/api/v1/auth/");
     }
 }
