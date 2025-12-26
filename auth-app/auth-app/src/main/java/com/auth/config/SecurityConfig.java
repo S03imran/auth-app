@@ -40,6 +40,8 @@ public class SecurityConfig {
                                 .sessionManagement( sm->sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeHttpRequests-> authorizeHttpRequests.requestMatchers(HttpMethod.POST,"/api/v1/auth/register").permitAll()
                 .requestMatchers("/api/v1/auth/login").permitAll()
+                        .requestMatchers("/api/v1/auth/refresh").permitAll()
+                        .requestMatchers("/api/v1/auth/logout").permitAll()
                 .anyRequest().authenticated())
                 .exceptionHandling(ex->ex.authenticationEntryPoint((request,response,exception)->{
                     exception.printStackTrace();
