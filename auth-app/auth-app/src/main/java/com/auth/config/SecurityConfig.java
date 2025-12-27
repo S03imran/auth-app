@@ -23,6 +23,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.Map;
@@ -32,6 +33,9 @@ import java.util.Map;
 public class SecurityConfig {
     @Autowired
     JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Autowired
+    AuthenticationSuccessHandler successHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -43,6 +47,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/refresh").permitAll()
                         .requestMatchers("/api/v1/auth/logout").permitAll()
                 .anyRequest().authenticated())
+                .oauth2Login(oauth2 ->
+                            oauth2.successHandler(successHandler)
+                                    .failureHandler(null)
+                        )
+                .logout(AbstractHttpConfigurer::disable)
                 .exceptionHandling(ex->ex.authenticationEntryPoint((request,response,exception)->{
                     exception.printStackTrace();
                     response.setStatus(401);
