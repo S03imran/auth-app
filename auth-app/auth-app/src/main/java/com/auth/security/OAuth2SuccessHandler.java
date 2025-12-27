@@ -10,8 +10,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -23,12 +25,17 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final CookieService cookieService;
     private final RefreshTokenRepository refreshTokenRepository;
+
+    @Value("${app.auth.frontend.success-redirect}")
+    private String frontEndSuccessUrl;
+    @Value("${app.auth.frontend.failure-redirect}")
+    private String frontEndFailureUrl;
 
     private final Logger logger = LoggerFactory.getLogger(OAuth2SuccessHandler.class);
     @Override
@@ -53,19 +60,36 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 String email = oAuth2User.getAttributes().getOrDefault("email", "").toString();
                 String name = oAuth2User.getAttributes().getOrDefault("name", "").toString();
                 String picture = oAuth2User.getAttributes().getOrDefault("picture", "").toString();
-                user = User.builder()
+                User newUser = User.builder()
                         .email(email)
                         .name(name)
                         .image(picture)
                         .enable(true)
+                        .providerId(googleId)
                         .provider(Provider.GOOGLE)
                         .build();
-                userRepository.findByEmail(email).ifPresentOrElse(user1 -> {
-                    logger.info("User already exists with email: " + email);
-                }, () -> {
-                    userRepository.save(user);
-                    logger.info("Created new user with email: " + email);
-                });
+                user = userRepository.findByEmail(email).orElseGet(()->userRepository.save(newUser));
+
+            }
+            case "github"->{
+                String name = oAuth2User.getAttributes().getOrDefault("login", "").toString();
+                //String email = oAuth2User.getAttributes().getOrDefault("email", "").toString();
+                String githubId = oAuth2User.getAttributes().getOrDefault("id", "").toString();
+                String image = oAuth2User.getAttributes().getOrDefault("avatar_url", "").toString();
+                String email = (String) oAuth2User.getAttributes().get("email");
+                if (email == null) {
+                    email = name + "@github.com";
+                }
+                User newUser = User.builder()
+                        .email(email)
+                        .name(name)
+                        .image(image)
+                        .enable(true)
+                        .providerId(githubId)
+                        .provider(Provider.GITHUB)
+                        .build();
+                user = userRepository.findByEmail(email).orElseGet(()->userRepository.save(newUser));
+
             }
             default -> throw new RuntimeException("Invalid Registration id");
         }
@@ -81,6 +105,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String refreshToken = jwtService.generateRefreshToken(user, refreshTokenOn.getJti());
         cookieService.attachRefreshCookie(response,refreshToken,(int) jwtService.getRefreshTtlSeconds());
 
-        response.getWriter().write("Login Successful via OAuth2");
+        //response.getWriter().write("Login Successful via OAuth2");
+        response.sendRedirect(frontEndSuccessUrl);
     }
 }
