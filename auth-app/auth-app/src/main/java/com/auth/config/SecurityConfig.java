@@ -3,7 +3,9 @@ package com.auth.config;
 import com.auth.dto.ApiError;
 import com.auth.security.JwtAuthenticationFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.lang.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -25,7 +27,11 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.List;
 import java.util.Map;
 
 @Configuration
@@ -42,10 +48,8 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                         .cors(Customizer.withDefaults())
                                 .sessionManagement( sm->sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authorizeHttpRequests-> authorizeHttpRequests.requestMatchers(HttpMethod.POST,"/api/v1/auth/register").permitAll()
-                .requestMatchers("/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/v1/auth/refresh").permitAll()
-                        .requestMatchers("/api/v1/auth/logout").permitAll()
+                .authorizeHttpRequests(authorizeHttpRequests-> authorizeHttpRequests
+                        .requestMatchers(AppConstants.AUTH_PUBLIC_URL).permitAll()
                 .anyRequest().authenticated())
                 .oauth2Login(oauth2 ->
                             oauth2.successHandler(successHandler)
@@ -93,4 +97,20 @@ public class SecurityConfig {
 //        UserDetails user3 = userBuilder.username("durgesh").password("def").roles("USER").build();
 //        return new InMemoryUserDetailsManager(user1,user2,user3);
 //    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.frontend-url}") String corsUrl
+    ){
+        var config = new CorsConfiguration();
+        String[] urls = corsUrl.trim().split(",");
+        config.setAllowedOrigins(Arrays.asList(urls));
+        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH","HEAD"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 }
